@@ -1,0 +1,226 @@
+<robot name="biped_wheeled_leg_open">
+  <mujoco>
+    <compiler meshdir="meshes" discardvisual="false"/>
+  </mujoco>
+  <link name="world"/>
+  <link name="base_link">
+    <inertial>
+      <origin xyz="-0.07 0.0 0.0709952" rpy="0.0 -0.0 0.0"/>
+      <mass value="3.51005"/>
+      <inertia ixx="0.00237397293849148" iyy="0.016897620915788166" izz="0.018650323085273892" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <material name="">
+        <color rgba="0.6274510025978088 0.6274510025978088 0.6274510025978088 1.0"/>
+      </material>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+      <geometry>
+        <mesh filename="package:///biped_wheeled_leg_open/meshes/base_link.STL"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="base_fixed" type="fixed">
+    <origin xyz="0.0 0.0 0.0" rpy="-1.5708005694372709 0.0 0.0"/>
+    <parent link="world"/>
+    <child link="base_link"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <link name="hip_pitch_actuator">
+    <inertial>
+      <origin xyz="-6.92884e-05 0.068232 7.41068e-06" rpy="0.0 -0.0 0.0"/>
+      <mass value="2.70656"/>
+      <inertia ixx="0.00200261915889122" iyy="0.0030808838168463718" izz="0.0019953934374230503" ixy="-5.366539123147526e-07" ixz="-5.202590420447448e-07" iyz="5.470389936016572e-08"/>
+    </inertial>
+    <visual>
+      <material name="">
+        <color rgba="0.2509799897670746 0.2509799897670746 0.2509799897670746 1.0"/>
+      </material>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+      <geometry>
+        <mesh filename="package:///biped_wheeled_leg_open/meshes/hip_pitch_actuator.STL"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.0 0.0" rpy="1.570700160302488 -0.0 0.0"/>
+      <geometry>
+        <cylinder radius="0.028" length="0.042"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="hip_pitch_actuator_fixed" type="fixed">
+    <origin xyz="0.0 0.0 -0.03945" rpy="1.5707994572844333 4.4724800002395143e-07 0.6434791953329263"/>
+    <parent link="base_link"/>
+    <child link="hip_pitch_actuator"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <link name="hip_pitch_link">
+    <inertial>
+      <origin xyz="0.122288 0.00340485 -0.000591129" rpy="0.0 -0.0 0.0"/>
+      <mass value="2.21436"/>
+      <inertia ixx="0.000746359548684925" iyy="0.020162038821788394" izz="0.019789302992511915" ixy="0.0" ixz="0.00012610991466883452" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <material name="">
+        <color rgba="0.6274510025978088 0.6274510025978088 0.6274510025978088 1.0"/>
+      </material>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+      <geometry>
+        <mesh filename="package:///biped_wheeled_leg_open/meshes/hip_pitch_link.STL"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.065 0.0 0.021" rpy="1.570700160302488 -0.0 0.0"/>
+      <geometry>
+        <cylinder radius="0.005" length="0.042"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0.095 0.0 0.021" rpy="1.570700160302488 -0.0 0.0"/>
+      <geometry>
+        <cylinder radius="0.005" length="0.042"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="hip_pitch_joint" type="revolute">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+    <parent link="hip_pitch_actuator"/>
+    <child link="hip_pitch_link"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-0.6" upper="0.9" effort="48.0" velocity="23.87616"/>
+    <dynamics damping="0.0112" friction="0.3217"/>
+  </joint>
+  <link name="knee_pitch_link">
+    <inertial>
+      <origin xyz="0.148784 0.000713563 0.00217024" rpy="0.0 -0.0 0.0"/>
+      <mass value="2.15352"/>
+      <inertia ixx="0.0007098728650291594" iyy="0.04136834945170187" izz="0.04084031327853813" ixy="6.519833317345555e-05" ixz="-0.0003555716299549053" iyz="2.217232707296403e-06"/>
+    </inertial>
+    <visual>
+      <material name="">
+        <color rgba="0.6274510025978088 0.6274510025978088 0.6274510025978088 1.0"/>
+      </material>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+      <geometry>
+        <mesh filename="package:///biped_wheeled_leg_open/meshes/knee_pitch_link.STL"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="knee_pitch_joint" type="revolute">
+    <origin xyz="0.375 0.0 0.0" rpy="3.141592653589793 1.5695351209389776 3.141592653589793"/>
+    <parent link="hip_pitch_link"/>
+    <child link="knee_pitch_link"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-1.1" upper="1.5" effort="48.0" velocity="23.87616"/>
+    <dynamics damping="0.0112" friction="0.3217"/>
+  </joint>
+  <link name="ankle_wheel_link">
+    <inertial>
+      <origin xyz="-3.19801e-06 -0.0458553 -6.54249e-06" rpy="0.0 -0.0 0.0"/>
+      <mass value="7.47242"/>
+      <inertia ixx="0.012365648474333094" iyy="0.02108081851660644" izz="0.012365775467175894" ixy="1.3098307151437068e-06" ixz="7.791364957117816e-08" iyz="2.6796495289443903e-06"/>
+    </inertial>
+    <visual>
+      <material name="">
+        <color rgba="0.6274510025978088 0.6274510025978088 0.6274510025978088 1.0"/>
+      </material>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+      <geometry>
+        <mesh filename="package:///biped_wheeled_leg_open/meshes/ankle_wheel_link.STL"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0 -0.045 0.0" rpy="1.570700160302488 -0.0 0.0"/>
+      <geometry>
+        <cylinder radius="0.08" length="0.042"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="ankle_wheel_joint" type="revolute">
+    <origin xyz="0.39297 0.0 0.004716" rpy="-3.1415853071630506 -0.9273214816191394 3.1415853071630506"/>
+    <parent link="knee_pitch_link"/>
+    <child link="ankle_wheel_link"/>
+    <axis xyz="0.0 1.0 0.0"/>
+    <limit lower="-3.141592653589793" upper="3.141592653589793" effort="10000000.0" velocity="10000000.0"/>
+    <dynamics damping="0.1" friction="1.0"/>
+  </joint>
+  <link name="knee_ternery_link">
+    <inertial>
+      <origin xyz="-0.0153169 0.00369448 0.0292857" rpy="0.0 -0.0 0.0"/>
+      <mass value="0.300664"/>
+      <inertia ixx="0.0002491317367161385" iyy="0.0004284726638567016" izz="0.00018422351683818476" ixy="3.4388493197863992e-06" ixz="4.749022685649384e-05" iyz="-6.575353165510059e-06"/>
+    </inertial>
+  </link>
+  <joint name="knee_ternery_fixed" type="fixed">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+    <parent link="hip_pitch_link"/>
+    <child link="knee_ternery_link"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <link name="knee_b_rod_link">
+    <inertial>
+      <origin xyz="0.188395 -0.00152232 0.0" rpy="0.0 -0.0 0.0"/>
+      <mass value="0.410882"/>
+      <inertia ixx="1.664262060015009e-05" iyy="0.0019673924352282264" izz="0.0019737224430634776" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+  </link>
+  <joint name="knee_b_rod_fixed" type="fixed">
+    <origin xyz="-0.018545 0.015 0.098265" rpy="0.0 -0.0 0.0"/>
+    <parent link="knee_ternery_link"/>
+    <child link="knee_b_rod_link"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <link name="knee_pitch_actuator">
+    <inertial>
+      <origin xyz="5.09633e-05 0.063232 4.75241e-05" rpy="0.0 -0.0 0.0"/>
+      <mass value="2.70656"/>
+      <inertia ixx="0.00199901175298418" iyy="0.0030808937217847603" izz="0.001999013698241345" ixy="3.9282988991757557e-07" ixz="3.6501396213874486e-06" iyz="3.706070313179675e-07"/>
+    </inertial>
+    <visual>
+      <material name="">
+        <color rgba="0.2509799897670746 0.2509799897670746 0.2509799897670746 1.0"/>
+      </material>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+      <geometry>
+        <mesh filename="package:///biped_wheeled_leg_open/meshes/knee_pitch_actuator.STL"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0 0.017 0.0" rpy="1.570700160302488 -0.0 0.0"/>
+      <geometry>
+        <cylinder radius="0.026" length="0.042"/>
+      </geometry>
+    </collision>
+  </link>
+  <joint name="knee_pitch_actuator_fixed" type="fixed">
+    <origin xyz="-0.14 0.0 -0.03445" rpy="1.5707994879496812 -8.426000003280986e-08 -2.1610004264181577"/>
+    <parent link="base_link"/>
+    <child link="knee_pitch_actuator"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <link name="knee_crank_link">
+    <inertial>
+      <origin xyz="0.00821808 0.0140749 -7.49109e-05" rpy="0.0 -0.0 0.0"/>
+      <mass value="0.578923"/>
+      <inertia ixx="0.00013601226103372103" iyy="0.0003604492816160988" izz="0.0002687862109849417" ixy="1.3112235693990799e-06" ixz="0.0" iyz="0.0"/>
+    </inertial>
+  </link>
+  <joint name="knee_crank_fixed" type="fixed">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 -0.0 0.0"/>
+    <parent link="knee_pitch_actuator"/>
+    <child link="knee_crank_link"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <link name="knee_u_rod_link">
+    <inertial>
+      <origin xyz="0.07 -0.00152232 0.0" rpy="0.0 -0.0 0.0"/>
+      <mass value="0.210882"/>
+      <inertia ixx="1.664262060015009e-05" iyy="8.739010817102596e-05" izz="9.372011600627706e-05" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+  </link>
+  <joint name="knee_u_rod_fixed" type="fixed">
+    <origin xyz="0.075 0.01 0.0" rpy="-3.1415853071511326 0.9805508652082452 -3.1415853071511326"/>
+    <parent link="knee_crank_link"/>
+    <child link="knee_u_rod_link"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+</robot>
