@@ -4,9 +4,14 @@ A minimal project for modeling and controlling a **two-link biped leg with a whe
 The model is built using **[Pinocchio](https://github.com/stack-of-tasks/pinocchio)** for kinematic computations, and **MuJoCo** can be used for visualization or simulation.  
 Inverse kinematics (IK) are solved analytically using trigonometric equations for efficiency and compatibility with low-power hardware such as the Raspberry Pi.
 
+
+Mean frequency to calculate IK: 3885.87 Hz
+
+![](media/scheme.jpg)
+
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 
@@ -85,6 +90,8 @@ Once installed, you can launch a simple demonstration:
 ```bash
 python example.py
 ```
+
+![](media/ik_example.gif)
 
 The example will:
 

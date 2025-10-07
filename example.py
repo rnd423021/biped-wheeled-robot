@@ -16,14 +16,16 @@ y_zero = data.site('flag').xpos[1].copy()
 hip_motor, knee_motor = biped.ik_solve(x_zero, z_zero)
 
 std = 0.1
+dt = []
 
 with mujoco.viewer.launch_passive(model, data) as viewer:
     start = time.time()
-    input()
     while viewer.is_running():
-        for i in range(30):
+        for i in range(1000):
+            t0 = time.perf_counter()
             x, z = x_zero + np.random.uniform(-std, std), z_zero + np.random.uniform(-std, std)
             hip_motor, knee_motor = biped.ik_solve(x, z)
+            dt.append(time.perf_counter() - t0)
 
             # Motors:
             data.joint("knee_crank_joint").qpos = knee_motor
@@ -41,8 +43,9 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             data.joint('flag').qpos = [x, y_zero, z, 1, 0, 0, 0]
 
             mujoco.mj_step(model, data)
-            time.sleep(0.5)
+            time.sleep(0.05)
             viewer.sync()
-        print("Turn off")
-        input()
         break
+
+print("Mean dt to calculate IK:", np.mean(dt), "sec")
+print("Mean frequency to calculate IK:", 1/np.mean(dt), "Hz")
