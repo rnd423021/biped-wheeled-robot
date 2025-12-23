@@ -1,3 +1,0 @@
-pin
-numpy
-mujoco

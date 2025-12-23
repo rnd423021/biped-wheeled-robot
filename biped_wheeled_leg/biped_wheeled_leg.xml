@@ -14,26 +14,41 @@
     <mesh name="knee_u_rod_link" content_type="model/stl" file="knee_u_rod_link.STL"/>
   </asset>
 
+<!-- 
+  <extension>
+    <plugin plugin="mujoco.pid">
+      <instance name="actuator_default">
+        <config key="kp" value="2.8"/>
+        <config key="ki" value="4.0"/>
+        <config key="kd" value="0.03"/>
+        <config key="imax" value="0.1"/>
+        <config key="slewmax" value="3.14159"/>
+      </instance>
+    </plugin>
+  </extension> -->
+
+
+
   <worldbody>
     <body name="base_link" quat="0.707105 -0.707108 0 0">
-      <inertial pos="-0.07 0 0.0709952" quat="0 0.707107 0 0.707107" mass="3.51005" diaginertia="0.0186503 0.0168976 0.00237397"/>
+      <inertial pos="-0.07 0 0.0709952" quat="0 0.707107 0 0.707107" mass="0.51005" diaginertia="0.0186503 0.0168976 0.00237397"/>
       <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.627451 0.627451 0.627451 1" mesh="base_link"/>
       <body name="hip_pitch_actuator" pos="0 0 -0.03945" quat="0.670822 0.670824 0.2236 0.223599">
-        <inertial pos="-6.92884e-05 0.068232 7.41068e-06" quat="0.706478 0.0252882 0.025265 0.706831" mass="2.70656" diaginertia="0.00308089 0.00200266 0.00199536"/>
+        <inertial pos="-6.92884e-05 0.068232 7.41068e-06" quat="0.706478 0.0252882 0.025265 0.706831" mass="1.0" diaginertia="0.00308089 0.00200266 0.00199536"/>
         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.25098 0.25098 0.25098 1" mesh="hip_pitch_actuator"/>
         <geom type="cylinder" size="0.028 0.021" euler="1.5707 0 0" pos="0 0 0" rgba="1 1 1 0.5"/>
         <body name="hip_pitch_link">
-          <inertial pos="0.122288 0.00340485 -0.000591129" quat="0.498342 0.501653 0.501653 0.498342" mass="2.21436" diaginertia="0.020162 0.0197901 0.000745523"/>
-          <joint name="hip_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.6 0.9" armature="0.014901975000000001" frictionloss="0.3" damping="0.03"/>
+          <inertial pos="0.122288 0.00340485 -0.000591129" quat="0.498342 0.501653 0.501653 0.498342" mass="1.0" diaginertia="0.020162 0.0197901 0.000745523"/>
+          <joint name="hip_pitch_joint" pos="0 0 0" axis="0 1 0" range="-1.5 1.5" armature=" 0.0081162" frictionloss="0.03" damping="0.03" ref = "-0.942 "/>
           <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.627451 0.627451 0.627451 1" mesh="hip_pitch_link"/>
           <geom type="cylinder" size="0.005 0.021" euler="1.5707 0 0" pos="0.065 0 0.021" rgba="1 1 1 0.5"/>
           <geom type="cylinder" size="0.005 0.021" euler="1.5707 0 0" pos="0.095 0 0.021" rgba="1 1 1 0.5"/>
           <body name="knee_pitch_link" pos="0.375 0 0" quat="0.707105 0 0.707108 0">
-            <inertial pos="0.148784 0.000713563 0.00217024" quat="0.501825 0.498959 0.496599 0.502595" mass="2.15352" diaginertia="0.0413684 0.0408434 0.000706617"/>
-            <joint name="knee_pitch_joint" pos="0 0 0" axis="0 1 0" range="-1.1 1.5"/>
+            <inertial pos="0.148784 0.000713563 0.00217024" quat="0.501825 0.498959 0.496599 0.502595" mass="1.0" diaginertia="0.0413684 0.0408434 0.000706617"/>
+            <joint name="knee_pitch_joint" pos="0 0 0" axis="0 1 0" range="-1.1 1.5"  />
             <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.627451 0.627451 0.627451 1" mesh="knee_pitch_link"/>
             <body name="ankle_wheel_link" pos="0.39297 0 0.004716" quat="0.447225 -1.64265e-06 -0.894422 1.64265e-06">
-              <inertial pos="-3.19801e-06 -0.0458553 -6.54249e-06" quat="0.377742 0.597818 0.597612 0.377869" mass="7.47242" diaginertia="0.0210808 0.0123658 0.0123656"/>
+              <inertial pos="-3.19801e-06 -0.0458553 -6.54249e-06" quat="0.377742 0.597818 0.597612 0.377869" mass="0.47242" diaginertia="0.0210808 0.0123658 0.0123656"/>
               <joint name="ankle_wheel_joint" pos="0 0 0" axis="0 1 0" frictionloss="1" damping="0.1"/>
               <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.627451 0.627451 0.627451 1" mesh="ankle_wheel_link"/>
               <geom type="cylinder" size="0.08 0.021" euler="1.5707 0 0" pos="0 -0.045 0" rgba="1 1 1 0.5"/>
@@ -54,12 +69,13 @@
         </body>
       </body>
       <body name="knee_pitch_actuator" pos="-0.14 0 -0.03445" quat="0.332967 0.332968 -0.623806 -0.623804">
-        <inertial pos="5.09633e-05 0.063232 4.75241e-05" quat="0.270579 0.653429 0.653098 0.270705" mass="2.70656" diaginertia="0.00308089 0.00200266 0.00199536"/>
+        <inertial pos="5.09633e-05 0.063232 4.75241e-05" quat="0.270579 0.653429 0.653098 0.270705" mass="1.0" diaginertia="0.00308089 0.00200266 0.00199536"/>
         <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.25098 0.25098 0.25098 1" mesh="knee_pitch_actuator"/>
         <geom type="cylinder" size="0.026 0.021" euler="1.5707 0 0" pos="0 0.017 0" rgba="1 1 1 0.5"/>
         <body name="knee_crank_link">
           <inertial pos="0.00821808 0.0140749 -7.49109e-05" quat="0.501458 0.501458 0.498537 0.498537" mass="0.578923" diaginertia="0.000360458 0.000268787 0.000136005"/>
-          <joint name="knee_crank_joint" pos="0 0 0" axis="0 1 0" armature="0.014901975000000001" frictionloss="0.3" damping="0.03"/>
+          <joint name="knee_crank_joint" pos="0 0 0" axis="0 1 0" armature="0.014901975000000001" frictionloss="0.03" damping="0.03" ref = "-0.6283"/>
+          <!-- -0.6283 -->
           <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 1 1" mesh="knee_crank_link"/>
           <body name="knee_u_rod_link" pos="0.075 0.01 0" quat="0.470869 -1.51092e-06 0.882203 -1.51092e-06">
             <inertial pos="0.07 -0.00152232 0" quat="0 0.707107 0 0.707107" mass="0.210882" diaginertia="0.00009372 0.00008739 1.66426e-05"/>
@@ -83,8 +99,8 @@
   </equality>
   
   <actuator>
-    <position name="hip_pitch_actuator" joint="hip_pitch_joint" kp="1000" kv="25" ctrlrange="-1 1"/>
-    <position name="knee_crank_actuator" joint="knee_crank_joint" kp="1000" kv="25" ctrlrange="-0.5 2.1"/>
+    <position name="hip_pitch_actuator" joint="hip_pitch_joint" kp="5000" kv="10" ctrlrange="-1.5 1.5" forcerange="-50 50"/>
+    <position name="knee_crank_actuator" joint="knee_crank_joint" kp="4000" kv="10" ctrlrange="-1 2.1" forcerange="-50 50"/>
   </actuator>
 
 </mujoco>

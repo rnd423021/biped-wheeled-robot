@@ -24,6 +24,7 @@ class BipedWheeledLeg():
         self.data = self.model.createData()
         pin.forwardKinematics(self.model, self.data, init_pose)
         pin.updateFramePlacements(self.model, self.data)
+  
 
         frames = ["hip_pitch_link", "knee_pitch_link", "ankle_wheel_link"]
         pos = []
@@ -70,6 +71,38 @@ class BipedWheeledLeg():
         self.knee_motor = - (self.knee_pitch + self.hip_pitch)
         return self.hip_motor, self.knee_motor
 
+    def forward_kinematics(self, hip_motor, knee_motor):
+        """Computes forward kinematics from motor angles.
+
+        Args:
+            hip_motor (float): Hip motor angle (rad).
+            knee_motor (float): Knee motor angle (rad).
+
+        Returns:
+            tuple[float, float]: (x, y) position of the ankle.
+        """
+        hip_pitch = -hip_motor
+        knee_pitch = hip_motor - knee_motor
+        return self._forward_kinematics_angles(hip_pitch, knee_pitch)
+
+    def _forward_kinematics_angles(self, hip_pitch, knee_pitch):
+        """Computes forward kinematics from joint angles.
+
+        Args:
+            hip_pitch (float): Hip joint angle (rad).
+            knee_pitch (float): Knee joint angle (rad).
+
+        Returns:
+            tuple[float, float]: (x, y) position of the ankle.
+        """
+        th1 = hip_pitch + self.hip_pitch_zero
+        th2 = knee_pitch  + self.knee_pitch_zero
+        
+        x = self.L1 * np.cos(th1) + self.L2 * np.cos(th1 + th2)
+        y = self.L1 * np.sin(th1) + self.L2 * np.sin(th1 + th2)
+        
+        return x, y
+
     def _jacobian(self, hip_pitch, knee_pitch):
         """Computes the analytical 2×2 Jacobian for the end-effector in the leg plane.
 
@@ -110,3 +143,4 @@ class BipedWheeledLeg():
         A   = np.array([[-1.0, 0.0],
                         [ 1.0,-1.0]])
         return Jq @ A
+    

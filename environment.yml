@@ -1,0 +1,14 @@
+name: axel_planner
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy
+  - scipy
+  - matplotlib
+  - jupyterlab
+  - pip
+  - pip:
+      - mujoco  # Replace with actual pip packages if needed
+      - pin
+      - 
