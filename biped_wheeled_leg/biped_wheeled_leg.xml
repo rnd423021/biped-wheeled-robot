@@ -99,8 +99,8 @@
   </equality>
   
   <actuator>
-    <position name="hip_pitch_actuator" joint="hip_pitch_joint" kp="5000" kv="10" ctrlrange="-1.5 1.5" forcerange="-50 50"/>
-    <position name="knee_crank_actuator" joint="knee_crank_joint" kp="4000" kv="10" ctrlrange="-1 2.1" forcerange="-50 50"/>
+    <position name="hip_pitch_actuator" joint="hip_pitch_joint" kp="500" kv="2" ctrlrange="-1.5 1.5" forcerange="-50 50"/>
+    <position name="knee_crank_actuator" joint="knee_crank_joint" kp="500" kv="2" ctrlrange="-1 2.1" forcerange="-50 50"/>
   </actuator>
 
 </mujoco>
