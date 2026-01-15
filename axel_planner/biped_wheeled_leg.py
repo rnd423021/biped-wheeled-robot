@@ -71,7 +71,7 @@ class BipedWheeledLeg():
         self.knee_motor = - (self.knee_pitch + self.hip_pitch)
         return self.hip_motor, self.knee_motor
 
-    def forward_kinematics(self, hip_motor, knee_motor):
+    def forward_kinematics(self, knee_mt, hip_mt):
         """Computes forward kinematics from motor angles.
 
         Args:
@@ -81,9 +81,9 @@ class BipedWheeledLeg():
         Returns:
             tuple[float, float]: (x, y) position of the ankle.
         """
-        hip_pitch = -hip_motor
-        knee_pitch = hip_motor - knee_motor
-        return self._forward_kinematics_angles(hip_pitch, knee_pitch)
+        knee_pitch = -knee_mt
+        hip_pitch = knee_mt - hip_mt
+        return self._forward_kinematics_angles(knee_pitch, hip_pitch)
 
     def _forward_kinematics_angles(self, hip_pitch, knee_pitch):
         """Computes forward kinematics from joint angles.
