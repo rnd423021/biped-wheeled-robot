@@ -2,21 +2,10 @@ import sys
 import time
 import numpy as np
  
-from mini_cheetah_tmotor_can.src.motor_driver.canmotorlib import CanMotorController
+from src_non_ros.mini_cheetah_tmotor_can.src.motor_driver.canmotorlib import CanMotorController
 
-
-
-def setZeroPosition(motor, initPos):
-
-    pos = initPos
-
-    while abs(np.rad2deg(pos)) > 0.5:
-        pos, vel, curr = motor.set_zero_position()
-        print("Position: {}, Velocity: {}, Torque: {}".format(np.rad2deg(pos), np.rad2deg(vel),
-                                                                curr))
-
-
-
+ 
+ 
 CAN_SOCKET = "can0"
 CAN_MOTOR_ID_HIP = 0x2
 CAN_MOTOR_ID_KNEE = 0x3

@@ -1,0 +1,11 @@
+source /opt/ros/jazzy/setup.bash 
+rm -rf build/ install/ log/
+export PYTHONPATH="${PYTHONPATH}:/home/kirill/prj/biped-wheeled-robot/venv/lib/python3.12/site-packages"
+export PYTHONPATH="${PYTHONPATH}:/home/kirill/prj/biped-wheeled-robot/src_non_ros"
+export PYTHONPATH="${PYTHONPATH}:/home/kirill/prj/biped-wheeled-robot/venv/lib/python3.12/site-packages/cmeel.prefix/lib/python3.12/site-packages"
+colcon build --symlink-install  --packages-select hardware control
+source install/setup.bash 
+
+
+
+ 

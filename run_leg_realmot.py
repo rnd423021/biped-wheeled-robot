@@ -27,7 +27,7 @@ class TrajectoryExecutor:
 
         self.leg_model = BipedWheeledLeg()
         self.status = TrajectoryExecutorStatus.IDLE
-        self.lock = threading.Lock()
+ 
 
         # Trajectory data
         self.xy_traj = None
@@ -45,49 +45,49 @@ class TrajectoryExecutor:
         self.actual_q_log = []
 
     def set_trajectory(self, xy_traj, time_traj, num_points, traj_dt):
-        with self.lock:
-            self.xy_traj = xy_traj
-            self.time_traj = time_traj
-            self.num_points = num_points
-            self.traj_dt = traj_dt
-            self.q_values_traj = np.array(
-                [self.leg_model.ik_solve(xy[0], xy[1]) for xy in self.xy_traj]
-            )
-            self.start_time_traj = None
-            self.current_commanded_q = None
-            self.status = TrajectoryExecutorStatus.IDLE
+ 
+        self.xy_traj = xy_traj
+        self.time_traj = time_traj
+        self.num_points = num_points
+        self.traj_dt = traj_dt
+        self.q_values_traj = np.array(
+            [self.leg_model.ik_solve(xy[0], xy[1]) for xy in self.xy_traj]
+        )
+        self.start_time_traj = None
+        self.current_commanded_q = None
+        self.status = TrajectoryExecutorStatus.IDLE
 
     def start(self):
         """Start trajectory execution"""
-        with self.lock:
-            if self.q_values_traj is not None:
-                self.start_time_traj = None
-                self.status = TrajectoryExecutorStatus.RUNNING_TRAJ
+ 
+        if self.q_values_traj is not None:
+            self.start_time_traj = None
+            self.status = TrajectoryExecutorStatus.RUNNING_TRAJ
 
     def pause(self):
         """Pause trajectory execution"""
-        with self.lock:
-            self.status = TrajectoryExecutorStatus.PAUSED
+ 
+        self.status = TrajectoryExecutorStatus.PAUSED
 
     def stop(self):
         """Stop trajectory execution"""
-        with self.lock:
-            self.start_time_traj = None
-            self.status = TrajectoryExecutorStatus.IDLE
+
+        self.start_time_traj = None
+        self.status = TrajectoryExecutorStatus.IDLE
 
     def get_error_data(self):
         """Get error tracking data"""
-        with self.lock:
-            return {
-                "error": np.array(self.error_log) if self.error_log else np.array([]),
-                "time": np.array(self.time_log) if self.time_log else np.array([]),
-                "desired_q": (
-                    np.array(self.desired_q_log) if self.desired_q_log else np.array([])
-                ),
-                "actual_q": (
-                    np.array(self.actual_q_log) if self.actual_q_log else np.array([])
-                ),
-            }
+ 
+        return {
+            "error": np.array(self.error_log) if self.error_log else np.array([]),
+            "time": np.array(self.time_log) if self.time_log else np.array([]),
+            "desired_q": (
+                np.array(self.desired_q_log) if self.desired_q_log else np.array([])
+            ),
+            "actual_q": (
+                np.array(self.actual_q_log) if self.actual_q_log else np.array([])
+            ),
+        }
 
 
 def plot_tracking_errors(error_data: dict, show: bool = True, save_path: str = None):

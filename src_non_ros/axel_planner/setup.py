@@ -5,7 +5,7 @@ NAME = 'axel_planner'
 setuptools.setup(
     name=NAME,
     packages=setuptools.find_packages(where='axel_planner'),
-    package_dir={'': 'axel_planner'},
+    package_dir={'': '.'},
 
     classifiers=[
         'Programming Language :: Python :: 3',

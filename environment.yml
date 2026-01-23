@@ -11,4 +11,3 @@ dependencies:
   - pip:
       - mujoco  # Replace with actual pip packages if needed
       - pin
-      - 
