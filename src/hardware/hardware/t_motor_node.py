@@ -74,8 +74,8 @@ class TMotorNode(rclpy.node.Node):
     def des_pos_callback(self, msg: Float32MultiArray):
         des_pos_list = msg.data
         self.get_logger().debug(f"Received desired positions: {des_pos_list}")
-        self.dict_des_pos["MOT_HIP_R"] = -des_pos_list[0]
-        self.dict_des_pos["MOT_KNEE_R"] = -des_pos_list[1]
+        self.dict_des_pos["MOT_HIP_R"] = des_pos_list[0]
+        self.dict_des_pos["MOT_KNEE_R"] = des_pos_list[1]
 
         if not self.__is_motor_enabled:
             self.remove_initial_jerk_and_enable()
@@ -107,8 +107,8 @@ class TMotorNode(rclpy.node.Node):
     def publish_actual_telemetry(self):
         msg_pos = Float32MultiArray()
         msg_pos.data = [
-            -self.dict_act_pos_vel_current["MOT_HIP_R"][0],
-            -self.dict_act_pos_vel_current["MOT_KNEE_R"][0],
+            self.dict_act_pos_vel_current["MOT_HIP_R"][0],
+            self.dict_act_pos_vel_current["MOT_KNEE_R"][0],
         ]
 
         self.pub_act_pos.publish(msg_pos)
