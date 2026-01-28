@@ -1,0 +1,6 @@
+# Request
+string command  # start, pause, stop
+---
+# Response
+bool success
+string message

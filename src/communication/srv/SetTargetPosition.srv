@@ -1,0 +1,7 @@
+# Request
+float64 x
+float64 y
+---
+# Response
+bool success
+string message

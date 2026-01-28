@@ -1,6 +1,7 @@
-import pinocchio as pin
+
 import numpy as np
 from pathlib import Path
+import mujoco
 
 class BipedWheeledLeg():
     """Kinematic model of a planar two-link biped leg with a wheel at the ankle.
@@ -12,25 +13,33 @@ class BipedWheeledLeg():
     """
     def __init__(
         self,
-        urdf_path=Path("biped_wheeled_leg/biped_wheeled_leg_open.urdf")
+        model_path=Path("biped_wheeled_leg/biped_wheeled_leg.xml")
     ):
         """Initializes the BipedWheeledLeg model.
 
         Args:
-            urdf_path (Path): Path to the URDF file describing the leg.
+            model_path (Path): Path to the URDF file describing the leg.
         """
-        self.model = pin.buildModelFromUrdf(urdf_path)
-        init_pose = np.zeros(self.model.nq)
-        self.data = self.model.createData()
-        pin.forwardKinematics(self.model, self.data, init_pose)
-        pin.updateFramePlacements(self.model, self.data)
+        # self.model = pin.buildModelFromUrdf(model_path)
+        # init_pose = np.zeros(self.model.nq)
+        # self.data = self.model.createData()
+        # pin.forwardKinematics(self.model, self.data, init_pose)
+        # pin.updateFramePlacements(self.model, self.data)
   
 
         frames = ["hip_pitch_link", "knee_pitch_link", "ankle_wheel_link"]
         pos = []
+        # for frame in frames:
+        #     frame_id = self.model.getFrameId(frame)
+        #     pos.append(self.data.oMf[frame_id].translation)
+        # self.debug_pos = pos
+
+        self.model_mj = mujoco.MjModel.from_xml_path(model_path)
+        self.data_mj = mujoco.MjData(self.model_mj)
+        self.data_mj.qpos[:] = np.zeros(self.model_mj.nq)
+        mujoco.mj_kinematics(self.model_mj, self.data_mj)
         for frame in frames:
-            frame_id = self.model.getFrameId(frame)
-            pos.append(self.data.oMf[frame_id].translation)
+            pos.append(self.data_mj.xpos[self.model_mj.body(frame).id])
 
         self.L1 = np.linalg.norm(pos[1] - pos[0])
         self.L2 = np.linalg.norm(pos[2] - pos[1])
@@ -71,7 +80,7 @@ class BipedWheeledLeg():
         self.knee_motor = - (self.knee_pitch + self.hip_pitch)
         return self.hip_motor, self.knee_motor
 
-    def forward_kinematics(self, knee_mt, hip_mt):
+    def forward_kinematics(self, hip_motor, knee_motor):
         """Computes forward kinematics from motor angles.
 
         Args:
@@ -81,9 +90,9 @@ class BipedWheeledLeg():
         Returns:
             tuple[float, float]: (x, y) position of the ankle.
         """
-        knee_pitch = -knee_mt
-        hip_pitch = knee_mt - hip_mt
-        return self._forward_kinematics_angles(knee_pitch, hip_pitch)
+        hip_pitch = -hip_motor
+        knee_pitch = hip_motor - knee_motor
+        return self._forward_kinematics_angles(hip_pitch, knee_pitch)
 
     def _forward_kinematics_angles(self, hip_pitch, knee_pitch):
         """Computes forward kinematics from joint angles.

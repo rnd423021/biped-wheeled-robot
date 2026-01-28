@@ -6,6 +6,8 @@ from rclpy.node import Node
 from std_msgs.msg import Float32, Float32MultiArray, String
 from geometry_msgs.msg import Point
 
+from communication.srv import SetTargetPosition, TrajectoryCommand
+
 from axel_planner.biped_wheeled_leg import BipedWheeledLeg
 from axel_planner.planner import get_trajectory
 
@@ -15,6 +17,9 @@ class TrajectoryExecutorStatus(enum.Enum):
     RUNNING_TRAJ = 1
     PAUSED = 2
 
+class TrajectoryExecutorSide(enum.Enum):
+    LEFT = 0
+    RIGHT = 1
 
 class TrajectoryExecutor:
     def __init__(self):
@@ -82,6 +87,7 @@ class TrajectoryExecutor:
         }
 
 
+
 class TrajectoryExecutorNode(Node):
     """ROS2 Node for trajectory execution using t_motor_node"""
 
@@ -109,10 +115,18 @@ class TrajectoryExecutorNode(Node):
             self.actual_position_callback,
             10,
         )
-        self.create_subscription(
-            Point, "target_position", self.target_position_callback, 10
+
+        # Services
+        self.target_srv = self.create_service(
+            SetTargetPosition,
+            "set_target_position",
+            self.set_target_position_callback,
         )
-        self.create_subscription(String, "command", self.command_callback, 10)
+        self.command_srv = self.create_service(
+            TrajectoryCommand,
+            "trajectory_command",
+            self.trajectory_command_callback,
+        )
 
         # Timer for trajectory execution (uses traj_dt from traj_generator)
         self.traj_timer = self.create_timer(0.01, self.trajectory_callback)
@@ -126,50 +140,70 @@ class TrajectoryExecutorNode(Node):
         """Update actual joint positions from t_motor_node"""
         self.actual_joint_pos = np.array(msg.data)
 
-    def target_position_callback(self, msg: Point):
-        """Handle new target position"""
-        target_xy = np.array([msg.x, msg.y])
+    def set_target_position_callback(self, request, response):
+        """Service callback to handle new target position"""
+        try:
+            target_xy = np.array([request.x, request.y])
 
-        # Get current position from actual joint positions
-        initial_x, initial_y = self.leg_model.forward_kinematics(
-            self.actual_joint_pos[0], self.actual_joint_pos[1]
-        )
+            # Get current position from actual joint positions
+            initial_x, initial_y = self.leg_model.forward_kinematics(
+                self.actual_joint_pos[0], self.actual_joint_pos[1]
+            )
 
-        # Generate trajectory
-        x_traj, y_traj, time_traj, num_points, traj_dt = get_trajectory(
-            [initial_x, initial_y],
-            target_xy,
-            traj_velocity=0.3,
-            traj_point_per_meter=600,
-        )
+            # Generate trajectory
+            x_traj, y_traj, time_traj, num_points, traj_dt = get_trajectory(
+                [initial_x, initial_y],
+                target_xy,
+                traj_velocity=0.3,
+                traj_point_per_meter=600,
+            )
 
-        # Set trajectory
-        self.traj_generator.set_trajectory(
-            xy_traj=np.array([x_traj, y_traj]).T,
-            time_traj=time_traj,
-            num_points=num_points,
-            traj_dt=traj_dt,
-        )
+            # Set trajectory
+            self.traj_generator.set_trajectory(
+                xy_traj=np.array([x_traj, y_traj]).T,
+                time_traj=time_traj,
+                num_points=num_points,
+                traj_dt=traj_dt,
+            )
 
-        self.traj_generator.start()
-        
-        self.get_logger().info(f"Trajectory set to target: ({msg.x:.3f}, {msg.y:.3f})")
+            self.traj_generator.start()
+            
+            response.success = True
+            response.message = f"Trajectory set to target: ({request.x:.3f}, {request.y:.3f})"
+            self.get_logger().info(response.message)
+            
+        except Exception as e:
+            response.success = False
+            response.message = f"Failed to set target position: {str(e)}"
+            self.get_logger().error(response.message)
+            
+        return response
 
-    def command_callback(self, msg: String):
-        """Handle trajectory control commands"""
-        command = msg.data.lower()
+    def trajectory_command_callback(self, request, response):
+        """Service callback to handle trajectory control commands"""
+        command = request.command.lower()
 
         if command == "start":
             self.traj_generator.start()
-            self.get_logger().info("Trajectory started")
+            response.success = True
+            response.message = "Trajectory started"
+            self.get_logger().info(response.message)
         elif command == "pause":
             self.traj_generator.pause()
-            self.get_logger().info("Trajectory paused")
+            response.success = True
+            response.message = "Trajectory paused"
+            self.get_logger().info(response.message)
         elif command == "stop":
             self.traj_generator.stop()
-            self.get_logger().info("Trajectory stopped")
+            response.success = True
+            response.message = "Trajectory stopped"
+            self.get_logger().info(response.message)
         else:
-            self.get_logger().warn(f"Unknown command: {command}")
+            response.success = False
+            response.message = f"Unknown command: {command}. Valid commands: start, pause, stop"
+            self.get_logger().warn(response.message)
+            
+        return response
 
     def publish_status(self):
         """Publish current status and end effector position"""
@@ -180,7 +214,7 @@ class TrajectoryExecutorNode(Node):
 
         # Publish end effector position
         ee_x, ee_y = self.leg_model.forward_kinematics(
-            self.actual_joint_pos[1], self.actual_joint_pos[0]
+            self.actual_joint_pos[0], self.actual_joint_pos[1]
         )
         ee_msg = Point()
         ee_msg.x = float(ee_x)

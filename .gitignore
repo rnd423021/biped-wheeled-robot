@@ -4,3 +4,6 @@ venv
 install
 build
 log
+axel_planner_env
+**.pyc
+__pycache__

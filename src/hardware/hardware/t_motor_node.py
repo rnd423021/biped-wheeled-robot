@@ -6,8 +6,8 @@ from mini_cheetah_tmotor_can.src.motor_driver.canmotorlib import CanMotorControl
 
 
 DICT_MOTOR_ID = {
-    "MOT_HIP_R": 0x2,
-    "MOT_KNEE_R": 0x3,
+    "MOT_HIP_R": 0x4,
+    "MOT_KNEE_R": 0x1,
 }
 
 CAN_SOCKET = "can0"
@@ -17,14 +17,15 @@ class TMotorNode(rclpy.node.Node):
     def __init__(self):
         super().__init__("t_motor_node")
         self.get_logger().info("T Motor Node has been started.")
+
         self.__is_motor_enabled = False
         self.hip_mot_PD_gain = {
-            "P": 10.0,
-            "D": 1,
+            "P": 20.0,
+            "D": 1.0,
         }  # Proportional and Derivative gains for hip motor
         self.knee_mot_PD_gain = {
-            "P": 10.0,
-            "D": 1,
+            "P": 20.0,
+            "D": 1.0,
         }  # Proportional and Derivative gains for knee motor
 
         self.dict_des_pos = {
@@ -66,15 +67,18 @@ class TMotorNode(rclpy.node.Node):
             CAN_SOCKET, DICT_MOTOR_ID["MOT_KNEE_R"], "AK10_9_V1p1"
         )
 
+    def remove_initial_jerk_and_enable(self):
+        self.motor_hip_r.enable_motor()
+        self.motor_knee_r.enable_motor()
+
     def des_pos_callback(self, msg: Float32MultiArray):
         des_pos_list = msg.data
         self.get_logger().debug(f"Received desired positions: {des_pos_list}")
-        self.dict_des_pos["MOT_HIP_R"] = des_pos_list[0]
-        self.dict_des_pos["MOT_KNEE_R"] = des_pos_list[1]
+        self.dict_des_pos["MOT_HIP_R"] = -des_pos_list[0]
+        self.dict_des_pos["MOT_KNEE_R"] = -des_pos_list[1]
 
         if not self.__is_motor_enabled:
-            self.motor_hip_r.enable_motor()
-            self.motor_knee_r.enable_motor()
+            self.remove_initial_jerk_and_enable()
             self.__is_motor_enabled = True
 
     def send_t_motor_callbacks(self):
@@ -103,8 +107,8 @@ class TMotorNode(rclpy.node.Node):
     def publish_actual_telemetry(self):
         msg_pos = Float32MultiArray()
         msg_pos.data = [
-            self.dict_act_pos_vel_current["MOT_HIP_R"][0],
-            self.dict_act_pos_vel_current["MOT_KNEE_R"][0],
+            -self.dict_act_pos_vel_current["MOT_HIP_R"][0],
+            -self.dict_act_pos_vel_current["MOT_KNEE_R"][0],
         ]
 
         self.pub_act_pos.publish(msg_pos)
