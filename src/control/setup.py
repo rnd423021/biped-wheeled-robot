@@ -27,7 +27,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'one_leg_planner = control.one_leg_planner:main'
+            'one_leg_planner = control.one_leg_planner:main',
+            "two_leg_planner = control.launch_two_leg_planner:main",
         ],
     },
 )

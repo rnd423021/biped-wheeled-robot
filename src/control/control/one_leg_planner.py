@@ -7,7 +7,7 @@ from std_msgs.msg import Float32, Float32MultiArray, String
 from geometry_msgs.msg import Point
 
 from communication.srv import SetTargetPosition, TrajectoryCommand
-
+from communication.msg import MotorCommand
 from axel_planner.biped_wheeled_leg import BipedWheeledLeg
 from axel_planner.planner import get_trajectory
 
@@ -17,14 +17,16 @@ class TrajectoryExecutorStatus(enum.Enum):
     RUNNING_TRAJ = 1
     PAUSED = 2
 
+
 class TrajectoryExecutorSide(enum.Enum):
-    LEFT = 0
-    RIGHT = 1
+    LEFT = "left"
+    RIGHT = "right"
+
 
 class TrajectoryExecutor:
     def __init__(self):
 
-        self.leg_model = BipedWheeledLeg()
+        self.leg_model = BipedWheeledLeg("biped_wheeled_leg/biped_wheeled_leg.xml")
         self.status = TrajectoryExecutorStatus.IDLE
 
         # Trajectory data
@@ -87,26 +89,38 @@ class TrajectoryExecutor:
         }
 
 
-
 class TrajectoryExecutorNode(Node):
     """ROS2 Node for trajectory execution using t_motor_node"""
 
-    def __init__(self):
-        super().__init__("trajectory_executor_node")
+    def __init__(
+        self, left_or_right: TrajectoryExecutorSide = TrajectoryExecutorSide.RIGHT
+    ):
+        super().__init__(f"trajectory_executor_node_{left_or_right.value}")
 
+        self.left_or_right = left_or_right
+        if self.left_or_right == TrajectoryExecutorSide.LEFT:
+            self.hip_motor_index = 2  # Left hip motor index in t_motor_node
+            self.knee_motor_index = 3  # Left knee motor index in t_motor_node
+        elif self.left_or_right == TrajectoryExecutorSide.RIGHT:
+            self.hip_motor_index = 0  # Right hip motor index in t_motor_node
+            self.knee_motor_index = 1  # Right knee motor index in t_motor_node
         # Initialize trajectory traj_generator
         self.traj_generator = TrajectoryExecutor()
-        self.leg_model = BipedWheeledLeg()
+        self.leg_model = BipedWheeledLeg("biped_wheeled_leg/biped_wheeled_leg.xml")
 
         # Current actual joint positions from motors
-        self.actual_joint_pos = np.array([0.0, 0.0])  # [hip, knee]
+        self.actual_joint_pos = np.array([0.0, 0.0, 0.0, 0.0])  # [hip, knee, hip, knee]
 
         # Publishers
-        self.status_pub = self.create_publisher(String, "trajectory_status", 10)
-        self.desired_pos_pub = self.create_publisher(
-            Float32MultiArray, "t_motor/desired_position", 10
+        self.status_pub = self.create_publisher(
+            String, f"leg_planner_{self.left_or_right.value}/trajectory_status", 10
         )
-        self.end_effector_pub = self.create_publisher(Point, "end_effector_pos", 10)
+        self.desired_pos_pub = self.create_publisher(
+            MotorCommand, f"t_motor_{self.left_or_right.value}/desired_position", 10
+        )
+        self.end_effector_pub = self.create_publisher(
+            Point, f"leg_planner_{self.left_or_right.value}/end_effector_pos", 10
+        )
 
         # Subscribers
         self.create_subscription(
@@ -119,12 +133,12 @@ class TrajectoryExecutorNode(Node):
         # Services
         self.target_srv = self.create_service(
             SetTargetPosition,
-            "set_target_position",
+            f"leg_planner_{self.left_or_right.value}/set_target_position",
             self.set_target_position_callback,
         )
         self.command_srv = self.create_service(
             TrajectoryCommand,
-            "trajectory_command",
+            f"leg_planner_{self.left_or_right.value}/trajectory_command",
             self.trajectory_command_callback,
         )
 
@@ -134,7 +148,9 @@ class TrajectoryExecutorNode(Node):
         # Status publishing timer (10 Hz)
         self.create_timer(0.1, self.publish_status)
 
-        self.get_logger().info("Trajectory Executor Node initialized")
+        self.get_logger().info(
+            f"Trajectory Executor {self.left_or_right.value.capitalize()} Node initialized"
+        )
 
     def actual_position_callback(self, msg: Float32MultiArray):
         """Update actual joint positions from t_motor_node"""
@@ -144,10 +160,10 @@ class TrajectoryExecutorNode(Node):
         """Service callback to handle new target position"""
         try:
             target_xy = np.array([request.x, request.y])
-
+            
             # Get current position from actual joint positions
             initial_x, initial_y = self.leg_model.forward_kinematics(
-                self.actual_joint_pos[0], self.actual_joint_pos[1]
+                self.actual_joint_pos[self.hip_motor_index], self.actual_joint_pos[self.knee_motor_index]
             )
 
             # Generate trajectory
@@ -167,16 +183,16 @@ class TrajectoryExecutorNode(Node):
             )
 
             self.traj_generator.start()
-            
+
             response.success = True
-            response.message = f"Trajectory set to target: ({request.x:.3f}, {request.y:.3f})"
+            response.message = f"Trajectory leg_planner_{self.left_or_right.value} set to target: ({request.x:.3f}, {request.y:.3f})"
             self.get_logger().info(response.message)
-            
+
         except Exception as e:
             response.success = False
-            response.message = f"Failed to set target position: {str(e)}"
+            response.message = f"Failed to set target position for leg_planner_{self.left_or_right.value}: {str(e)}"
             self.get_logger().error(response.message)
-            
+
         return response
 
     def trajectory_command_callback(self, request, response):
@@ -200,9 +216,11 @@ class TrajectoryExecutorNode(Node):
             self.get_logger().info(response.message)
         else:
             response.success = False
-            response.message = f"Unknown command: {command}. Valid commands: start, pause, stop"
+            response.message = (
+                f"Unknown command: {command}. Valid commands: start, pause, stop"
+            )
             self.get_logger().warn(response.message)
-            
+
         return response
 
     def publish_status(self):
@@ -214,7 +232,7 @@ class TrajectoryExecutorNode(Node):
 
         # Publish end effector position
         ee_x, ee_y = self.leg_model.forward_kinematics(
-            self.actual_joint_pos[0], self.actual_joint_pos[1]
+            self.actual_joint_pos[self.hip_motor_index], self.actual_joint_pos[self.knee_motor_index]
         )
         ee_msg = Point()
         ee_msg.x = float(ee_x)
@@ -237,19 +255,20 @@ class TrajectoryExecutorNode(Node):
         # Calculate current position in trajectory
         elapsed_time = time.perf_counter() - self.traj_generator.start_time_traj
         traj_index = min(
-            int(elapsed_time / self.traj_generator.traj_dt), self.traj_generator.num_points - 1
+            int(elapsed_time / self.traj_generator.traj_dt),
+            self.traj_generator.num_points - 1,
         )
 
         # Send commands to t_motor_node
         current_q = self.traj_generator.q_values_traj[traj_index]
 
-        desired_pos_msg = Float32MultiArray()
-        desired_pos_msg.data = [float(current_q[0]), float(current_q[1])]
+        desired_pos_msg = MotorCommand()
+        desired_pos_msg.hip_motor = float(current_q[0])
+        desired_pos_msg.knee_motor = float(current_q[1])
         self.desired_pos_pub.publish(desired_pos_msg)
 
         # Store current commanded position for logging
         self.traj_generator.current_commanded_q = current_q
- 
 
         # Stop when trajectory is complete
         if traj_index >= self.traj_generator.num_points - 1:
@@ -265,7 +284,7 @@ class TrajectoryExecutorNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = TrajectoryExecutorNode()
+    node = TrajectoryExecutorNode(TrajectoryExecutorSide.LEFT)
 
     try:
         rclpy.spin(node)

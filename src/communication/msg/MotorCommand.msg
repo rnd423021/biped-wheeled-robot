@@ -1,0 +1,2 @@
+float32 hip_motor
+float32 knee_motor

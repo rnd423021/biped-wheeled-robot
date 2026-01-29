@@ -3,11 +3,13 @@ import rclpy.node
 from std_msgs.msg import Float32, Float32MultiArray
 import axel_planner
 from mini_cheetah_tmotor_can.src.motor_driver.canmotorlib import CanMotorController
-
+from communication.msg import MotorCommand
 
 DICT_MOTOR_ID = {
-    "MOT_HIP_R": 0x4,
-    "MOT_KNEE_R": 0x1,
+    "MOT_HIP_R": 0x2,
+    "MOT_KNEE_R": 0x3,
+    "MOT_HIP_L": 0x4,
+    "MOT_KNEE_L": 0x1,
 }
 
 CAN_SOCKET = "can0"
@@ -17,8 +19,11 @@ class TMotorNode(rclpy.node.Node):
     def __init__(self):
         super().__init__("t_motor_node")
         self.get_logger().info("T Motor Node has been started.")
+        self.is_left_side_active = True
 
-        self.__is_motor_enabled = False
+        self.__is_motor_enabled_right = False
+        self.__is_motor_enabled_left = False
+
         self.hip_mot_PD_gain = {
             "P": 20.0,
             "D": 1.0,
@@ -31,15 +36,29 @@ class TMotorNode(rclpy.node.Node):
         self.dict_des_pos = {
             "MOT_HIP_R": 0.0,
             "MOT_KNEE_R": 0.0,
+            "MOT_HIP_L": 0.0,
+            "MOT_KNEE_L": 0.0,
         }
 
         self.dict_act_pos_vel_current = {
             "MOT_HIP_R": (0.0, 0.0, 0.0),
             "MOT_KNEE_R": (0.0, 0.0, 0.0),
+            "MOT_HIP_L": (0.0, 0.0, 0.0),
+            "MOT_KNEE_L": (0.0, 0.0, 0.0),
         }
 
-        self.subscriber_des_pos = self.create_subscription(
-            Float32MultiArray, "t_motor/desired_position", self.des_pos_callback, 10
+        self.subscriber_des_pos_right = self.create_subscription(
+            MotorCommand,
+            "t_motor_right/desired_position",
+            self.des_pos_callback_right,
+            10,
+        )
+
+        self.subscriber_des_pos_left = self.create_subscription(
+            MotorCommand,
+            "t_motor_left/desired_position",
+            self.des_pos_callback_left,
+            10,
         )
 
         self.pub_act_pos = self.create_publisher(
@@ -66,20 +85,44 @@ class TMotorNode(rclpy.node.Node):
         self.motor_knee_r = CanMotorController(
             CAN_SOCKET, DICT_MOTOR_ID["MOT_KNEE_R"], "AK10_9_V1p1"
         )
+        if self.is_left_side_active:
+            self.motor_hip_l = CanMotorController(
+                CAN_SOCKET, DICT_MOTOR_ID["MOT_HIP_L"], "AK10_9_V1p1"
+            )
+            self.motor_knee_l = CanMotorController(
+                CAN_SOCKET, DICT_MOTOR_ID["MOT_KNEE_L"], "AK10_9_V1p1"
+            )
 
     def remove_initial_jerk_and_enable(self):
-        self.motor_hip_r.enable_motor()
-        self.motor_knee_r.enable_motor()
 
-    def des_pos_callback(self, msg: Float32MultiArray):
-        des_pos_list = msg.data
-        self.get_logger().debug(f"Received desired positions: {des_pos_list}")
-        self.dict_des_pos["MOT_HIP_R"] = des_pos_list[0]
-        self.dict_des_pos["MOT_KNEE_R"] = des_pos_list[1]
+        if self.is_left_side_active:
+            self.motor_hip_l.enable_motor()
+            self.motor_knee_l.enable_motor()
 
-        if not self.__is_motor_enabled:
-            self.remove_initial_jerk_and_enable()
-            self.__is_motor_enabled = True
+    def des_pos_callback_right(self, msg: MotorCommand):
+
+        if not self.__is_motor_enabled_right:
+            self.motor_hip_r.enable_motor()
+            self.motor_knee_r.enable_motor()
+            self.__is_motor_enabled_right = True
+
+        self.get_logger().debug(
+            f"Received desired positions: hip {msg.hip_motor}, knee {msg.knee_motor}"
+        )
+        self.dict_des_pos["MOT_HIP_R"] = msg.hip_motor
+        self.dict_des_pos["MOT_KNEE_R"] = msg.knee_motor
+
+    def des_pos_callback_left(self, msg: MotorCommand):
+        if not self.__is_motor_enabled_left:
+            self.motor_hip_l.enable_motor()
+            self.motor_knee_l.enable_motor()
+            self.__is_motor_enabled_left = True
+
+        self.get_logger().debug(
+            f"Received desired positions: hip {msg.hip_motor}, knee {msg.knee_motor}"
+        )
+        self.dict_des_pos["MOT_HIP_L"] = -msg.hip_motor
+        self.dict_des_pos["MOT_KNEE_L"] = -msg.knee_motor
 
     def send_t_motor_callbacks(self):
         pos_hip_r, vel_hip_r, curr_hip_r = self.motor_hip_r.send_rad_command(
@@ -103,6 +146,32 @@ class TMotorNode(rclpy.node.Node):
             vel_knee_r,
             curr_knee_r,
         )
+        if self.is_left_side_active:
+            pos_hip_l, vel_hip_l, curr_hip_l = self.motor_hip_l.send_rad_command(
+                self.dict_des_pos["MOT_HIP_L"],
+                0.0,
+                self.hip_mot_PD_gain["P"],
+                self.hip_mot_PD_gain["D"],
+                0.0,
+            )
+            pos_knee_l, vel_knee_l, curr_knee_l = self.motor_knee_l.send_rad_command(
+                self.dict_des_pos["MOT_KNEE_L"],
+                0.0,
+                self.knee_mot_PD_gain["P"],
+                self.knee_mot_PD_gain["D"],
+                0.0,
+            )
+
+            self.dict_act_pos_vel_current["MOT_HIP_L"] = (
+                -pos_hip_l,
+                -vel_hip_l,
+                curr_hip_l,
+            )
+            self.dict_act_pos_vel_current["MOT_KNEE_L"] = (
+                -pos_knee_l,
+                -vel_knee_l,
+                curr_knee_l,
+            )
 
     def publish_actual_telemetry(self):
         msg_pos = Float32MultiArray()
@@ -110,6 +179,13 @@ class TMotorNode(rclpy.node.Node):
             self.dict_act_pos_vel_current["MOT_HIP_R"][0],
             self.dict_act_pos_vel_current["MOT_KNEE_R"][0],
         ]
+        if self.is_left_side_active:
+            msg_pos.data.extend(
+                [
+                    self.dict_act_pos_vel_current["MOT_HIP_L"][0],
+                    self.dict_act_pos_vel_current["MOT_KNEE_L"][0],
+                ]
+            )
 
         self.pub_act_pos.publish(msg_pos)
         self.get_logger().debug(f"Published actual positions: {msg_pos.data}")
@@ -119,9 +195,51 @@ class TMotorNode(rclpy.node.Node):
             self.dict_act_pos_vel_current["MOT_HIP_R"][2],
             self.dict_act_pos_vel_current["MOT_KNEE_R"][2],
         ]
+        if self.is_left_side_active:
+            msg_curr.data.extend(
+                [
+                    self.dict_act_pos_vel_current["MOT_HIP_L"][2],
+                    self.dict_act_pos_vel_current["MOT_KNEE_L"][2],
+                ]
+            )
 
         self.pub_act_current.publish(msg_curr)
         self.get_logger().debug(f"Published actual currents: {msg_curr.data}")
+
+    def disable_commands(self):
+        self.motor_hip_r.send_rad_command(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        )
+        self.motor_knee_r.send_rad_command(
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        )
+        self.motor_hip_r.disable_motor()
+        self.motor_knee_r.disable_motor()
+        if self.is_left_side_active:
+            self.motor_hip_l.send_rad_command(
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            )
+            self.motor_knee_l.send_rad_command(
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            )
+            self.motor_hip_l.disable_motor()
+            self.motor_knee_l.disable_motor()
 
 
 def main(args=None):
@@ -133,8 +251,9 @@ def main(args=None):
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        pass
+        node.disable_commands()
     finally:
+        node.disable_commands()
         node.destroy_node()
         rclpy.try_shutdown()
 
