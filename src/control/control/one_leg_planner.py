@@ -159,34 +159,39 @@ class TrajectoryExecutorNode(Node):
     def set_target_position_callback(self, request, response):
         """Service callback to handle new target position"""
         try:
-            target_xy = np.array([request.x, request.y])
-            
-            # Get current position from actual joint positions
-            initial_x, initial_y = self.leg_model.forward_kinematics(
-                self.actual_joint_pos[self.hip_motor_index], self.actual_joint_pos[self.knee_motor_index]
-            )
+            if self.traj_generator.status == TrajectoryExecutorStatus.IDLE:
+                target_xy = np.array([request.x, request.y])
+                
+                # Get current position from actual joint positions
+                initial_x, initial_y = self.leg_model.forward_kinematics(
+                    self.actual_joint_pos[self.hip_motor_index], self.actual_joint_pos[self.knee_motor_index]
+                )
 
-            # Generate trajectory
-            x_traj, y_traj, time_traj, num_points, traj_dt = get_trajectory(
-                [initial_x, initial_y],
-                target_xy,
-                traj_velocity=0.3,
-                traj_point_per_meter=600,
-            )
+                # Generate trajectory
+                x_traj, y_traj, time_traj, num_points, traj_dt = get_trajectory(
+                    [initial_x, initial_y],
+                    target_xy,
+                    traj_velocity=0.4,
+                    traj_point_per_meter=800,
+                )
 
-            # Set trajectory
-            self.traj_generator.set_trajectory(
-                xy_traj=np.array([x_traj, y_traj]).T,
-                time_traj=time_traj,
-                num_points=num_points,
-                traj_dt=traj_dt,
-            )
+                # Set trajectory
+                self.traj_generator.set_trajectory(
+                    xy_traj=np.array([x_traj, y_traj]).T,
+                    time_traj=time_traj,
+                    num_points=num_points,
+                    traj_dt=traj_dt,
+                )
 
-            self.traj_generator.start()
+                self.traj_generator.start()
 
-            response.success = True
-            response.message = f"Trajectory leg_planner_{self.left_or_right.value} set to target: ({request.x:.3f}, {request.y:.3f})"
-            self.get_logger().info(response.message)
+                response.success = True
+                response.message = f"Trajectory leg_planner_{self.left_or_right.value} set to target: ({request.x:.3f}, {request.y:.3f})"
+                self.get_logger().info(response.message)
+            else:
+                response.success = True
+                response.message = f"Cannot set new target position while trajectory is running or paused for leg_planner_{self.left_or_right.value}."
+                self.get_logger().warn(response.message)
 
         except Exception as e:
             response.success = False

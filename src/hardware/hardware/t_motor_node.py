@@ -4,6 +4,7 @@ from std_msgs.msg import Float32, Float32MultiArray
 import axel_planner
 from mini_cheetah_tmotor_can.src.motor_driver.canmotorlib import CanMotorController
 from communication.msg import MotorCommand
+from std_srvs.srv import SetBool
 
 DICT_MOTOR_ID = {
     "MOT_HIP_R": 0x2,
@@ -25,13 +26,15 @@ class TMotorNode(rclpy.node.Node):
         self.__is_motor_enabled_left = False
 
         self.hip_mot_PD_gain = {
-            "P": 20.0,
+            "P": 50.0,
             "D": 1.0,
         }  # Proportional and Derivative gains for hip motor
         self.knee_mot_PD_gain = {
-            "P": 20.0,
+            "P": 50.0,
             "D": 1.0,
         }  # Proportional and Derivative gains for knee motor
+        self.__saved_knee_mot_P_gain = self.knee_mot_PD_gain["P"]
+        self.__saved_knee_mot_D_gain = self.knee_mot_PD_gain["D"]
 
         self.dict_des_pos = {
             "MOT_HIP_R": 0.0,
@@ -76,7 +79,13 @@ class TMotorNode(rclpy.node.Node):
         )
 
         self.timer_publish_telemetry = self.create_timer(
-            0.1, self.publish_actual_telemetry
+            0.02, self.publish_actual_telemetry
+        )
+
+        self.knee_motor_switch_srv = self.create_service(
+            SetBool,
+            "t_motor/enable_knee_motors",
+            self.switch_knee_motors_torque_callback,
         )
 
         self.motor_hip_r = CanMotorController(
@@ -121,8 +130,8 @@ class TMotorNode(rclpy.node.Node):
         self.get_logger().debug(
             f"Received desired positions: hip {msg.hip_motor}, knee {msg.knee_motor}"
         )
-        self.dict_des_pos["MOT_HIP_L"] = -msg.hip_motor
-        self.dict_des_pos["MOT_KNEE_L"] = -msg.knee_motor
+        self.dict_des_pos["MOT_HIP_L"] = msg.hip_motor
+        self.dict_des_pos["MOT_KNEE_L"] = msg.knee_motor
 
     def send_t_motor_callbacks(self):
         pos_hip_r, vel_hip_r, curr_hip_r = self.motor_hip_r.send_rad_command(
@@ -148,14 +157,14 @@ class TMotorNode(rclpy.node.Node):
         )
         if self.is_left_side_active:
             pos_hip_l, vel_hip_l, curr_hip_l = self.motor_hip_l.send_rad_command(
-                self.dict_des_pos["MOT_HIP_L"],
+                -self.dict_des_pos["MOT_HIP_L"],
                 0.0,
                 self.hip_mot_PD_gain["P"],
                 self.hip_mot_PD_gain["D"],
                 0.0,
             )
             pos_knee_l, vel_knee_l, curr_knee_l = self.motor_knee_l.send_rad_command(
-                self.dict_des_pos["MOT_KNEE_L"],
+                -self.dict_des_pos["MOT_KNEE_L"],
                 0.0,
                 self.knee_mot_PD_gain["P"],
                 self.knee_mot_PD_gain["D"],
@@ -206,7 +215,7 @@ class TMotorNode(rclpy.node.Node):
         self.pub_act_current.publish(msg_curr)
         self.get_logger().debug(f"Published actual currents: {msg_curr.data}")
 
-    def disable_commands(self):
+    def turn_off_commands(self):
         self.motor_hip_r.send_rad_command(
             0.0,
             0.0,
@@ -241,6 +250,25 @@ class TMotorNode(rclpy.node.Node):
             self.motor_hip_l.disable_motor()
             self.motor_knee_l.disable_motor()
 
+    def switch_knee_motors_torque_callback(
+        self, request: SetBool.Request, response: SetBool.Response
+    ):
+        if not request.data:
+            if self.knee_mot_PD_gain["P"] != 0.0:
+                self.__saved_knee_mot_P_gain = self.knee_mot_PD_gain["P"]
+                self.knee_mot_PD_gain["P"] = 0.0
+            if self.knee_mot_PD_gain["D"] != 0.0:
+                self.__saved_knee_mot_D_gain = self.knee_mot_PD_gain["D"]
+                self.knee_mot_PD_gain["D"] = 0.0
+        else:
+            self.knee_mot_PD_gain["P"] = self.__saved_knee_mot_P_gain
+            self.knee_mot_PD_gain["D"] = self.__saved_knee_mot_D_gain
+            self.dict_des_pos["MOT_KNEE_R"] = self.dict_act_pos_vel_current["MOT_KNEE_R"][0]
+            self.dict_des_pos["MOT_KNEE_L"] = self.dict_act_pos_vel_current["MOT_KNEE_L"][0] 
+
+        response.success = True
+        return response
+
 
 def main(args=None):
 
@@ -251,9 +279,9 @@ def main(args=None):
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        node.disable_commands()
+        node.turn_off_commands()
     finally:
-        node.disable_commands()
+        node.turn_off_commands()
         node.destroy_node()
         rclpy.try_shutdown()
 
